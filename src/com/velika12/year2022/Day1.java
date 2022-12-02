@@ -1,4 +1,4 @@
-package com.velika12;
+package com.velika12.year2022;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -6,13 +6,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-public class Main {
+public class Day1 {
 
     private static final LinkedList<Long> top3ElfCalories = LongStream.of(0, 0, 0).boxed().collect(Collectors.toCollection(LinkedList::new));
 
     public static void main(String[] args) throws FileNotFoundException {
 
-        try (Scanner scanner = new Scanner(new File("src\\com\\velika12\\input.txt"))) {
+        try (Scanner scanner = new Scanner(new File("input\\year2022\\input_day1.txt"))) {
 
             long elfCalories = 0;
 
