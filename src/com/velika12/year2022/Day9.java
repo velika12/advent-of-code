@@ -6,10 +6,13 @@ import java.util.*;
 
 public class Day9 {
 
+    private static final int ROPE_LENGTH = 10;
+
     public static void main(String[] args) throws FileNotFoundException {
         try (Scanner scanner = new Scanner(new File("input/year2022/input_day9.txt"))) {
 
-            Rope rope = new Rope(10);
+            Figure figure = new Figure();
+            Rope rope = new Rope(ROPE_LENGTH, figure);
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
@@ -21,7 +24,71 @@ public class Day9 {
                 rope.moveHead(direction, steps);
             }
 
-            System.out.println("Number of positions tail visited: " + rope.getNumberOfPositionsTailVisited());
+            figure.print();
+            System.out.println();
+            System.out.println("Number of positions tail visited: " + figure.getNumberOfPositionsTailVisited());
+        }
+    }
+}
+
+class Figure {
+    private int maxX = 0;
+    private int minX = 0;
+    private int maxY = 0;
+    private int minY = 0;
+
+    private Coordinate start;
+
+    private final Set<Coordinate> tailPath = new HashSet<>();
+
+    public int getNumberOfPositionsTailVisited() {
+        return tailPath.size();
+    }
+
+    public void drawStart(Coordinate coordinate) {
+        start = coordinate;
+        drawBackground(coordinate);
+    }
+
+    public void drawTail(Coordinate coordinate) {
+        tailPath.add(coordinate);
+        drawBackground(coordinate);
+    }
+
+    public void drawBackground(Coordinate coordinate) {
+        updateEdges(coordinate);
+    }
+
+    private void updateEdges(Coordinate coordinate) {
+        if (coordinate.getX() > maxX) {
+            maxX = coordinate.getX();
+        }
+        if (coordinate.getY() > maxY) {
+            maxY = coordinate.getY();
+        }
+        if (coordinate.getX() < minX) {
+            minX = coordinate.getX();
+        }
+        if (coordinate.getY() < minY) {
+            minY = coordinate.getY();
+        }
+    }
+
+    public void print() {
+        char[][] figure = new char[maxY - minY + 1][maxX - minX + 1];
+        Arrays.stream(figure).forEach(row -> Arrays.fill(row, '.'));
+
+        for (Coordinate coordinate : tailPath) {
+            figure[maxY - coordinate.getY()][coordinate.getX() - minX] = '#';
+        }
+
+        figure[maxY - start.getY()][start.getX() - minX] = 'S';
+
+        for (char[] row : figure) {
+            for (char symbol : row) {
+                System.out.print(symbol);
+            }
+            System.out.println();
         }
     }
 }
@@ -31,9 +98,9 @@ class Rope {
     private final Knot head;
     private final Knot tail;
 
-    private final Set<Coordinate> tailPath = new HashSet<>();
+    private final Figure figure;
 
-    public Rope(int length) {
+    public Rope(int length, Figure figure) {
         while (length > 0) {
             knots.add(new Knot());
             length--;
@@ -42,12 +109,15 @@ class Rope {
         head = knots.getFirst();
         tail = knots.getLast();
 
-        tailPath.add(tail.getPosition());
+        this.figure = figure;
+        figure.drawStart(head.getPosition());
+        figure.drawTail(tail.getPosition());
     }
 
     public void moveHead(Direction direction, int steps) {
         for (int i = 0; i < steps; i++) {
             head.move(direction);
+            figure.drawBackground(head.getPosition());
 
             Knot previous = head;
             Iterator<Knot> it = knots.listIterator(1);
@@ -59,16 +129,13 @@ class Rope {
                 }
 
                 current.moveTowards(previous);
+                figure.drawBackground(current.getPosition());
 
                 previous = current;
             }
 
-            tailPath.add(tail.getPosition());
+            figure.drawTail(tail.getPosition());
         }
-    }
-
-    public int getNumberOfPositionsTailVisited() {
-        return tailPath.size();
     }
 }
 
@@ -81,6 +148,14 @@ class Coordinate {
     private Coordinate(int x, int y) {
         this.x = x;
         this.y = y;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
     }
 
     public void increaseX() {
