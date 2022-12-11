@@ -3,7 +3,7 @@ package com.velika12.year2022;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.*;
-import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -22,8 +22,8 @@ public class Day11 {
 
         try (Scanner scanner = new Scanner(new File("input/year2022/input_day11.txt"))) {
             int monkeyId = 0;
-            List<Integer> startingItems = null;
-            Function<Integer, Integer> operation = null;
+            List<Item> startingItems = null;
+            Consumer<Item> operation = null;
             int testNumber = 0;
             int throwToOnTestSuccess = 0;
             int throwToOnTestFail = 0;
@@ -38,7 +38,7 @@ public class Day11 {
 
                 Matcher itemsMatcher = itemsPattern.matcher(line);
                 if (itemsMatcher.find()) {
-                    startingItems = Arrays.stream(itemsMatcher.group(1).split(", ")).map(Integer::new).collect(Collectors.toList());
+                    startingItems = Arrays.stream(itemsMatcher.group(1).split(", ")).map(Integer::new).map(Item::new).collect(Collectors.toList());
                     continue;
                 }
 
@@ -48,15 +48,15 @@ public class Day11 {
                     try {
                         int operand = Integer.parseInt(operationsMatcher.group(2));
                         if (operator.equals("*")) {
-                            operation = i -> i * operand;
+                            operation = i -> i.multiply(operand);
                             continue;
                         }
                         if (operator.equals("+")) {
-                            operation = i -> i + operand;
+                            operation = i -> i.plus(operand);
                             continue;
                         }
                     } catch (Exception e) {
-                        operation = i -> i * i;
+                        operation = Item::square;
                         continue;
                     }
                 }
@@ -85,19 +85,14 @@ public class Day11 {
             monkeys.put(monkeyId, new Monkey(monkeyId, startingItems, operation, testNumber, throwToOnTestSuccess, throwToOnTestFail));
         }
 
-        for (int round = 1; round <= 20; round++) {
+        for (int round = 1; round <= 10000; round++) {
             monkeys.forEach((id, monkey) -> {
                 while (monkey.hasAnythingToPlay()) {
                     int throwToMonkeyId = monkey.inspect();
-                    int thrownItem = monkey.throwItem();
+                    Item thrownItem = monkey.throwItem();
                     monkeys.get(throwToMonkeyId).catchItem(thrownItem);
                 }
             });
-
-            if (round % 100 == 0 || round == 20 || round == 1) {
-                System.out.println("Round " + round);
-                System.out.println(monkeys);
-            }
         }
 
         System.out.println(monkeys);
@@ -115,21 +110,23 @@ public class Day11 {
 
 class Monkey {
     private final int id;
-    private final LinkedList<Integer> items = new LinkedList<>();
-    private final Function<Integer, Integer> operation;
-    private final Integer testNumber;
+    private final LinkedList<Item> items = new LinkedList<>();
+    private final Consumer<Item> operation;
+    private final int testNumber;
     private final int throwToOnTestSuccess;
     private final int throwToOnTestFail;
 
     private int inspectCounter = 0;
 
-    public Monkey(int id, List<Integer> startingItems, Function<Integer, Integer> operation, Integer testNumber, int throwToOnTestSuccess, int throwToOnTestFail) {
+    public Monkey(int id, List<Item> startingItems, Consumer<Item> operation, Integer testNumber, int throwToOnTestSuccess, int throwToOnTestFail) {
         this.id = id;
         this.items.addAll(startingItems);
         this.operation = operation;
         this.testNumber = testNumber;
         this.throwToOnTestSuccess = throwToOnTestSuccess;
         this.throwToOnTestFail = throwToOnTestFail;
+
+        Item.addPossibleDivider(testNumber);
     }
 
     public boolean hasAnythingToPlay() {
@@ -137,19 +134,18 @@ class Monkey {
     }
 
     public int inspect() {
-        Integer item = items.removeFirst();
-        int worryLevel = operation.apply(item) / 3;
-        items.addFirst(worryLevel);
+        Item item = items.getFirst();
+        operation.accept(item);
         inspectCounter++;
 
-        return worryLevel % testNumber == 0 ? throwToOnTestSuccess : throwToOnTestFail;
+        return item.isDividedBy(testNumber) ? throwToOnTestSuccess : throwToOnTestFail;
     }
 
-    public int throwItem() {
+    public Item throwItem() {
         return items.removeFirst();
     }
 
-    public void catchItem(int item) {
+    public void catchItem(Item item) {
         items.addLast(item);
     }
 
@@ -161,8 +157,43 @@ class Monkey {
     public String toString() {
         return "Monkey{" +
                 "id=" + id +
-                ", items=" + items +
                 ", inspectCounter=" + inspectCounter +
                 '}';
+    }
+}
+
+class Item {
+    private static final Set<Item> allItems = new HashSet<>();
+
+    public static void addPossibleDivider(int number) {
+        Map<Item, Integer> remainderMap = allItems.stream().collect(Collectors.toMap(item -> item, item -> item.initialValue % number));
+        remainderMapByDivider.put(number, remainderMap);
+    }
+
+    private static final Map<Integer, Map<Item, Integer>> remainderMapByDivider = new HashMap<>();
+
+    private final int initialValue;
+
+    public Item(int number) {
+        initialValue = number;
+        allItems.add(this);
+        remainderMapByDivider.forEach((divider, map) -> map.put(this, number % divider));
+    }
+
+    public void plus(int number) {
+        remainderMapByDivider.forEach((divider, map) -> map.put(this, (map.get(this) + number) % divider));
+    }
+
+    public void multiply(int number) {
+        remainderMapByDivider.forEach((divider, map) -> map.put(this, (map.get(this) * number) % divider));
+    }
+    
+    public void square() {
+        remainderMapByDivider.forEach((divider, map) -> map.put(this, (map.get(this) * map.get(this)) % divider));
+    }
+    
+    public boolean isDividedBy(int divider) {
+        int remainder = remainderMapByDivider.get(divider).get(this);
+        return remainder % divider == 0;
     }
 }
