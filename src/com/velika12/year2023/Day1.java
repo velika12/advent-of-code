@@ -28,10 +28,6 @@ public class Day1 {
 
             while (scanner.hasNextLine()) {
                 String str = scanner.nextLine();
-//                System.out.print(str.toCharArray());
-//                System.out.print(" = ");
-//                System.out.println(findCalibrationValue(str.toCharArray()));
-
                 calibrationSum += findCalibrationValue(str.toCharArray());
             }
 
@@ -53,7 +49,6 @@ public class Day1 {
                 String spelledDigit = detectSpelledDigit(chars, currentIndex);
                 if (spelledDigit != null) {
                     digits.add(spelledDigits.get(spelledDigit));
-                    currentIndex += (spelledDigit.length() - 1);
                 }
             }
 
